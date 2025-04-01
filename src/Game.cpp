@@ -28,18 +28,36 @@ void Game::init() {
         isRunning = false;
     }
 
+    // SDL_image init
+    if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_image could not initialize. SDL_image Error: %s\n", IMG_GetError());
+        isRunning = false;
+    }
+
     // set currentScene
     currentScene = new SceneMain();
+    currentScene->init();
 }
 
 // handles main game loop
 void Game::run() {
     while (isRunning) {  // while game is still running
+        auto start = SDL_GetTicks();
+
         SDL_Event event;
 
         handleEvents(&event);
-        update();
+        update(deltaTime);
         render();
+
+        auto end = SDL_GetTicks();
+        auto elapsed = end - start;  // count how long 1 frame takes to run
+        if (elapsed < frameTime) {
+            SDL_Delay(frameTime - elapsed);   // then total time must be equal to frameTime
+            deltaTime = frameTime / 1000.0f;  // convert deltaTime from ms to seconds
+        } else {
+            deltaTime = elapsed / 1000.0f;  // convert deltaTime from ms to seconds
+        }
     }
 }
 
@@ -48,6 +66,8 @@ void Game::clean() {
         currentScene->clean();
         delete currentScene;
     }
+
+    IMG_Quit();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -73,8 +93,8 @@ void Game::handleEvents(SDL_Event* event) {
 }
 
 // update game logic
-void Game::update() {
-    currentScene->update();
+void Game::update(float deltaTime) {
+    currentScene->update(deltaTime);
 }
 
 // clear, render, show new render
