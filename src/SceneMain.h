@@ -4,6 +4,8 @@
 #include "Objects.h"
 #include "Scene.h"
 
+#include <list>
+
 /*
     prevent problems when SceneMain include Game
     and Game also include SceneMain -> have include
@@ -23,10 +25,20 @@ class SceneMain : public Scene {  // inherit from Scene class
     void clean() override;
 
     void keyboardControls(float deltaTime);
+    void updatePlayerProjectiles(float deltaTime);
+    
+    void renderPlayerProjectiles();
+
+    void playerShoot();
 
    private:
     Player player;
     Game& game;
+
+    // create template for objects to avoid repeated file reads
+    ProjectilePlayer projectilePLayerTemplate;
+
+    std::list<ProjectilePlayer*> playerProjectiles;
 };
 
 #endif
