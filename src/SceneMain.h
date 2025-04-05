@@ -31,6 +31,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void spawnEnemy();
     void updateEnemies(float deltaTime);
     void udpateEnemyProjectiles(float deltaTime);
+    void updatePlayer(float deltaTime);
     
     // render helper function
     void renderPlayerProjectiles();
@@ -42,6 +43,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void spawnEnemyProjectile(Enemy* enemy);
 
     SDL_FPoint getDirection(Enemy* enemy);
+    void enemyDeath(Enemy* enemy);
 
    private:
     Player player;
@@ -49,6 +51,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     std::list<ProjectilePlayer*> playerProjectiles;
     std::list<Enemy*> enemies;
     std::list<ProjectileEnemy*> enemyProjectiles;
+    bool gameOver = false;
 
     // create template for objects to avoid repeated file reads
     ProjectilePlayer projectilePLayerTemplate;

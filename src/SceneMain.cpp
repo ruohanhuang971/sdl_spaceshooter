@@ -25,7 +25,7 @@ void SceneMain::init() {
     player.width /= 2;                                                            // shrink player
     player.height /= 2;
     // center player to bottom of screen
-    player.position.x = game.getWidth() / 2 - player.width / 2;  
+    player.position.x = game.getWidth() / 2 - player.width / 2;
     player.position.y = game.getHeight() - player.height;
 
     // init player projectile template
@@ -33,7 +33,7 @@ void SceneMain::init() {
     SDL_QueryTexture(projectilePLayerTemplate.texture, NULL, NULL, &projectilePLayerTemplate.width, &projectilePLayerTemplate.height);
     projectilePLayerTemplate.width /= 4;
     projectilePLayerTemplate.height /= 2;
-    
+
     // init enemy templates
     enemyTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/enemy_ship.png");
     SDL_QueryTexture(enemyTemplate.texture, NULL, NULL, &enemyTemplate.width, &enemyTemplate.height);
@@ -57,6 +57,7 @@ void SceneMain::update(float deltaTime) {
     spawnEnemy();
     updateEnemies(deltaTime);
     udpateEnemyProjectiles(deltaTime);
+    updatePlayer(deltaTime);
 }
 
 void SceneMain::render() {
@@ -66,16 +67,18 @@ void SceneMain::render() {
     // render enemy projectiles
     renderEnemyProjectiles();
 
-    //render enemies
+    // render enemies
     renderEnemies();
 
     // render player (in front of projectiles)
     // player postition is a float (for calculation precision), need to cast to int
-    SDL_Rect playerRect = {static_cast<int>(player.position.x),
-                           static_cast<int>(player.position.y),
-                           player.width,
-                           player.height};
-    SDL_RenderCopy(game.getRenderer(), player.texture, NULL, &playerRect);
+    if (!gameOver) {
+        SDL_Rect playerRect = {static_cast<int>(player.position.x),
+                               static_cast<int>(player.position.y),
+                               player.width,
+                               player.height};
+        SDL_RenderCopy(game.getRenderer(), player.texture, NULL, &playerRect);
+    }
 }
 
 void SceneMain::clean() {
@@ -125,6 +128,10 @@ void SceneMain::keyboardControls(float deltaTime) {
         and a value of 0 means that it is not. Indexes into this array are
         obtained by using SDL_Scancode values
     */
+    if (gameOver) {
+        return;
+    }
+
     auto keyboardState = SDL_GetKeyboardState(NULL);
 
     // player movements
@@ -168,9 +175,9 @@ void SceneMain::keyboardControls(float deltaTime) {
 void SceneMain::renderEnemies() {
     for (auto enemy : enemies) {
         SDL_Rect enemyRect = {static_cast<int>(enemy->position.x),
-                                   static_cast<int>(enemy->position.y),
-                                   enemy->width,
-                                   enemy->height};
+                              static_cast<int>(enemy->position.y),
+                              enemy->width,
+                              enemy->height};
         SDL_RenderCopy(game.getRenderer(), enemy->texture, NULL, &enemyRect);
     }
 }
@@ -178,12 +185,12 @@ void SceneMain::renderEnemies() {
 void SceneMain::renderEnemyProjectiles() {
     for (auto projectile : enemyProjectiles) {
         SDL_Rect enemyProjectileRect = {static_cast<int>(projectile->position.x),
-                                   static_cast<int>(projectile->position.y),
-                                   projectile->width,
-                                   projectile->height};
-        
-        float angle = atan2(projectile->direction.y, projectile->direction.x) * 180 / M_PI; // get angle in degrees
-        angle -= 90; // want turn texture 0 degree at actual 90 degree on game coordinates
+                                        static_cast<int>(projectile->position.y),
+                                        projectile->width,
+                                        projectile->height};
+
+        float angle = atan2(projectile->direction.y, projectile->direction.x) * 180 / M_PI;  // get angle in degrees
+        angle -= 90;                                                                         // want turn texture 0 degree at actual 90 degree on game coordinates
         SDL_RenderCopyEx(game.getRenderer(), projectile->texture, NULL, &enemyProjectileRect, angle, NULL, SDL_FLIP_VERTICAL);
     }
 }
@@ -199,7 +206,7 @@ void SceneMain::spawnPlayerProjectile() {
 
 void SceneMain::spawnEnemyProjectile(Enemy* enemy) {
     // create projectile
-    ProjectileEnemy* projectile = new ProjectileEnemy(projectileEnemyTemplate); // use template to init new projectile
+    ProjectileEnemy* projectile = new ProjectileEnemy(projectileEnemyTemplate);  // use template to init new projectile
     projectile->position.x = enemy->position.x + enemy->width / 2 - projectile->width / 2;
     projectile->position.y = enemy->position.y + enemy->height / 2 - projectile->height / 2;
     projectile->direction = getDirection(enemy);
@@ -228,28 +235,50 @@ SDL_FPoint SceneMain::getDirection(Enemy* enemy) {
     return direction;
 }
 
+void SceneMain::enemyDeath(Enemy* enemy) {
+    delete enemy;
+}
+
 void SceneMain::updatePlayerProjectiles(float deltaTime) {
     for (auto it = playerProjectiles.begin(); it != playerProjectiles.end();) {
         auto projectile = *it;
         projectile->position.y -= projectile->speed * deltaTime;
 
-        // bounds checking
-        if (projectile->position.y + projectile->height < 0) {  // left
+        if (projectile->position.y + projectile->height < 0) {  // bounds checking
             delete projectile;
-            it = playerProjectiles.erase(it);  // delete
+            it = playerProjectiles.erase(it);  // delete projectile
         } else {
-            it++;  // move to next projectile
+            bool hit = false;
+            for (auto enemy : enemies) {  // check if projectile hits the enemy
+                SDL_Rect enemyRect = {    // area of enemy
+                                      static_cast<int>(enemy->position.x), static_cast<int>(enemy->position.y),
+                                      enemy->width, enemy->height};
+                SDL_Rect projectileRect = {// area of projectile
+                                           static_cast<int>(projectile->position.x), static_cast<int>(projectile->position.y),
+                                           projectile->width, projectile->height};
+                if (SDL_HasIntersection(&enemyRect, &projectileRect)) {
+                    hit = true;
+                    enemy->currentHealth -= projectile->damage;  // decrease health
+
+                    delete projectile;
+                    it = playerProjectiles.erase(it);  // delete projectile
+                    break;
+                }
+            }
+            if (!hit) {
+                it++;  // move to next projectile
+            }
         }
     }
 }
 
 void SceneMain::spawnEnemy() {
-    if (dis(gen) > 1 / 60.0f) { // determine if there should be a enemy spawn
+    if (dis(gen) > 1 / 60.0f) {  // determine if there should be a enemy spawn
         return;
     }
 
-    Enemy* enemy = new Enemy(enemyTemplate); // generate enemy based on template
-    enemy->position.x = dis(gen) * (game.getWidth() - enemy->width); // get random spot at top of screen for enemy to spawn
+    Enemy* enemy = new Enemy(enemyTemplate);                          // generate enemy based on template
+    enemy->position.x = dis(gen) * (game.getWidth() - enemy->width);  // get random spot at top of screen for enemy to spawn
     enemy->position.y = -enemy->height;
     enemies.push_back(enemy);
 }
@@ -265,11 +294,16 @@ void SceneMain::updateEnemies(float deltaTime) {
             delete enemy;
             it = enemies.erase(it);  // delete
         } else {
-            if (currentTime - enemy->lastProjectileTime > enemy->coolDown) { // determine if enemy should shoot
+            if (currentTime - enemy->lastProjectileTime > enemy->coolDown && !gameOver) {  // determine if enemy should shoot
                 spawnEnemyProjectile(enemy);
                 enemy->lastProjectileTime = currentTime;
             }
-            it++;  // move to next projectile
+            if (enemy->currentHealth <= 0) {
+                enemyDeath(enemy);
+                it = enemies.erase(it);  // delete
+            } else {
+                it++;  // move to next projectile
+            }
         }
     }
 }
@@ -284,11 +318,48 @@ void SceneMain::udpateEnemyProjectiles(float deltaTime) {
         if (projectile->position.y + projectile->height < 0 ||
             projectile->position.y > game.getHeight() ||
             projectile->position.x + projectile->width < 0 ||
-            projectile->position.x > game.getWidth()) { 
+            projectile->position.x > game.getWidth()) {
             delete projectile;
             it = enemyProjectiles.erase(it);  // delete
         } else {
-            it++;  // move to next projectile
+            SDL_Rect playerRect = {// area of player
+                                   static_cast<int>(player.position.x), static_cast<int>(player.position.y),
+                                   player.width, player.height};
+            SDL_Rect projectileRect = {// area of projectile
+                                       static_cast<int>(projectile->position.x), static_cast<int>(projectile->position.y),
+                                       projectile->width, projectile->height};
+            if (SDL_HasIntersection(&playerRect, &projectileRect) && !gameOver) {
+                player.currentHealth -= projectile->damage;  // decrease health
+
+                delete projectile;
+                it = enemyProjectiles.erase(it);  // delete projectile
+                break;
+            } else {
+                it++;  // move to next projectile
+            }
+        }
+    }
+}
+
+void SceneMain::updatePlayer(float deltaTime) {
+    if (gameOver) {
+        return;
+    }
+
+    if (player.currentHealth <= 0) {
+        gameOver = true;
+    }
+
+    for (auto enemy : enemies) {  // detect enemy collision
+        SDL_Rect playerRect = {   // area of player
+                               static_cast<int>(player.position.x), static_cast<int>(player.position.y),
+                               player.width, player.height};
+        SDL_Rect enemyRect = {// area of projectile
+                              static_cast<int>(enemy->position.x), static_cast<int>(enemy->position.y),
+                              enemy->width, enemy->height};
+        if (SDL_HasIntersection(&playerRect, &enemyRect) && !gameOver) {
+            player.currentHealth -= 1;  // decrease health
+            enemy->currentHealth = 0;
         }
     }
 }
