@@ -22,8 +22,8 @@ void SceneMain::init() {
     // load player texture
     player.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/space_ship.png");
     SDL_QueryTexture(player.texture, NULL, NULL, &player.width, &player.height);  // store width and height of texture in player struct
-    player.width /= 2;                                                            // shrink player
-    player.height /= 2;
+    player.width /= 3;                                                            // shrink player
+    player.height /= 3;
     // center player to bottom of screen
     player.position.x = game.getWidth() / 2 - player.width / 2;
     player.position.y = game.getHeight() - player.height;
@@ -32,7 +32,7 @@ void SceneMain::init() {
     projectilePLayerTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/player_projectile.png");
     SDL_QueryTexture(projectilePLayerTemplate.texture, NULL, NULL, &projectilePLayerTemplate.width, &projectilePLayerTemplate.height);
     projectilePLayerTemplate.width /= 4;
-    projectilePLayerTemplate.height /= 2;
+    projectilePLayerTemplate.height /= 4;
 
     // init enemy templates
     enemyTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/enemy_ship.png");
@@ -45,6 +45,13 @@ void SceneMain::init() {
     SDL_QueryTexture(projectileEnemyTemplate.texture, NULL, NULL, &projectileEnemyTemplate.width, &projectileEnemyTemplate.height);
     projectileEnemyTemplate.width /= 2;
     projectileEnemyTemplate.height /= 2;
+
+    // init explosion template
+    explosionTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/explosion.png");
+    SDL_QueryTexture(explosionTemplate.texture, NULL, NULL, &explosionTemplate.width, &explosionTemplate.height);
+    explosionTemplate.totalFrames = explosionTemplate.width / explosionTemplate.height;
+    explosionTemplate.height /= 2; 
+    explosionTemplate.width = explosionTemplate.height;  // each frame is a square rather than the whole width of animation
 }
 
 void SceneMain::handleEvents(SDL_Event* event) {
@@ -58,6 +65,7 @@ void SceneMain::update(float deltaTime) {
     updateEnemies(deltaTime);
     udpateEnemyProjectiles(deltaTime);
     updatePlayer(deltaTime);
+    updateExplosion(deltaTime);
 }
 
 void SceneMain::render() {
@@ -79,6 +87,9 @@ void SceneMain::render() {
                                player.height};
         SDL_RenderCopy(game.getRenderer(), player.texture, NULL, &playerRect);
     }
+
+    // render explosions
+    renderExplosions();
 }
 
 void SceneMain::clean() {
@@ -96,6 +107,9 @@ void SceneMain::clean() {
     }
     if (projectileEnemyTemplate.texture != nullptr) {
         SDL_DestroyTexture(projectileEnemyTemplate.texture);
+    }
+    if (explosionTemplate.texture != nullptr) {
+        SDL_DestroyTexture(explosionTemplate.texture);
     }
 
     // clean player projectile list
@@ -121,6 +135,14 @@ void SceneMain::clean() {
         }
     }
     enemyProjectiles.clear();
+
+    // clean explosion
+    for (auto explosion : explosions) {
+        if (explosion != nullptr) {
+            delete explosion;
+        }
+    }
+    explosions.clear();
 }
 
 void SceneMain::keyboardControls(float deltaTime) {
@@ -195,6 +217,16 @@ void SceneMain::renderEnemyProjectiles() {
     }
 }
 
+void SceneMain::renderExplosions() {
+    for (auto explosion : explosions) {
+        SDL_Rect src = {explosion->currentFrame * explosion->width * 2, 0,
+                                  explosion->width * 2, explosion->height * 2};
+        SDL_Rect dest = {static_cast<int>(explosion->position.x), static_cast<int>(explosion->position.y),
+                         explosion->width, explosion->height};
+        SDL_RenderCopy(game.getRenderer(), explosion->texture, &src, &dest);
+    }
+}
+
 void SceneMain::spawnPlayerProjectile() {
     // create a new projectile and add it to the list of projectiles in the scene
     ProjectilePlayer* projectile = new ProjectilePlayer(projectilePLayerTemplate);  // use template to init new projectile
@@ -236,6 +268,13 @@ SDL_FPoint SceneMain::getDirection(Enemy* enemy) {
 }
 
 void SceneMain::enemyDeath(Enemy* enemy) {
+    // create explosion
+    Explosion* explosion = new Explosion(explosionTemplate);
+    explosion->position.x = enemy->position.x + enemy->width / 2 - explosion->width / 2;
+    explosion->position.y = enemy->position.y + enemy->height / 2 - explosion->height / 2;
+    explosion->startTime = SDL_GetTicks();
+    explosions.push_back(explosion);
+
     delete enemy;
 }
 
@@ -347,7 +386,15 @@ void SceneMain::updatePlayer(float deltaTime) {
     }
 
     if (player.currentHealth <= 0) {
+        // create explosion
+        Explosion* explosion = new Explosion(explosionTemplate);
+        explosion->position.x = player.position.x + player.width / 2 - explosion->width / 2;
+        explosion->position.y = player.position.y + player.height / 2 - explosion->height / 2;
+        explosion->startTime = SDL_GetTicks();
+        explosions.push_back(explosion);
+
         gameOver = true;
+        return;
     }
 
     for (auto enemy : enemies) {  // detect enemy collision
@@ -360,6 +407,20 @@ void SceneMain::updatePlayer(float deltaTime) {
         if (SDL_HasIntersection(&playerRect, &enemyRect) && !gameOver) {
             player.currentHealth -= 1;  // decrease health
             enemy->currentHealth = 0;
+        }
+    }
+}
+
+void SceneMain::updateExplosion(float deltaTime) {
+    auto currentTime = SDL_GetTicks();
+    for (auto it = explosions.begin(); it != explosions.end();) {
+        Explosion* explosion = *it;
+        explosion->currentFrame = (currentTime - explosion->startTime) * explosion->fps / 1000.0f; // ms * 1000 * fps
+        if (explosion->currentFrame >= explosion->totalFrames) {
+            delete explosion;
+            it = explosions.erase(it);  // delete explosion
+        } else {
+            it++;
         }
     }
 }
