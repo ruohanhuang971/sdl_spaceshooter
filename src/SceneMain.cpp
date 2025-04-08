@@ -21,6 +21,16 @@ void SceneMain::init() {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to load music: %s", Mix_GetError());
     }
     Mix_PlayMusic(bgm, -1);
+    Mix_Volume(-1, MIX_MAX_VOLUME / 4);
+
+    // load in sound effects
+    soundEffects["player_shoot"] = Mix_LoadWAV("assets/music/spaceship/wave/laser/laser_shoot2.wav");
+    soundEffects["enemy_shoot"] = Mix_LoadWAV("assets/music/spaceship/wave/laser/laser_shoot4.wav");
+    soundEffects["player_explode"] = Mix_LoadWAV("assets/music/spaceship/wave/explosion/explosion2.wav");
+    soundEffects["enemy_explode"] = Mix_LoadWAV("assets/music/spaceship/wave/explosion/explosion6.wav");
+    soundEffects["hit"] = Mix_LoadWAV("assets/music/spaceship/wave/utility/eff6.wav");
+    soundEffects["item"] = Mix_LoadWAV("assets/music/spaceship/wave/utility/eff5.wav");
+
 
     // init random
     std::random_device rd;
@@ -119,6 +129,14 @@ void SceneMain::clean() {
         Mix_HaltMusic();
         Mix_FreeMusic(bgm);
     }
+
+    // clean sound effects
+    for (auto sound : soundEffects) {
+        if (sound.second != nullptr) {
+            Mix_FreeChunk(sound.second);
+        }
+    }
+    soundEffects.clear();
 
     // clean template
     if (projectilePLayerTemplate.texture != nullptr) {
@@ -277,6 +295,8 @@ void SceneMain::spawnPlayerProjectile() {
     projectile->position.y = player.position.y;
 
     playerProjectiles.push_back(projectile);
+
+    Mix_PlayChannel(0, soundEffects["player_shoot"], 0); // play sound
 }
 
 void SceneMain::spawnEnemyProjectile(Enemy* enemy) {
@@ -287,6 +307,8 @@ void SceneMain::spawnEnemyProjectile(Enemy* enemy) {
     projectile->direction = getDirection(enemy);
 
     enemyProjectiles.push_back(projectile);
+
+    Mix_PlayChannel(-1, soundEffects["enemy_shoot"], 0); // play sound
 }
 
 SDL_FPoint SceneMain::getDirection(Enemy* enemy) {
@@ -317,6 +339,8 @@ void SceneMain::enemyDeath(Enemy* enemy) {
     explosion->position.y = enemy->position.y + enemy->height / 2 - explosion->height / 2;
     explosion->startTime = SDL_GetTicks();
     explosions.push_back(explosion);
+
+    Mix_PlayChannel(-1, soundEffects["enemy_explode"], 0); // play sound
 
     if (dis(gen) < enemy->itemDropRate) {
         dropItem(enemy);
@@ -354,6 +378,8 @@ void SceneMain::getItem(Item* item) {
         player.shield = true;
     } else {
     }
+
+    Mix_PlayChannel(0, soundEffects["item"], 0); // play sound
 }
 
 void SceneMain::updatePlayerProjectiles(float deltaTime) {
@@ -379,6 +405,8 @@ void SceneMain::updatePlayerProjectiles(float deltaTime) {
 
                     delete projectile;
                     it = playerProjectiles.erase(it);  // delete projectile
+                    Mix_PlayChannel(0, soundEffects["hit"], 0); // play sound
+
                     break;
                 }
             }
@@ -450,6 +478,8 @@ void SceneMain::udpateEnemyProjectiles(float deltaTime) {
 
                 delete projectile;
                 it = enemyProjectiles.erase(it);  // delete projectile
+                Mix_PlayChannel(0, soundEffects["hit"], 0); // play sound
+
                 break;
             } else {
                 it++;  // move to next projectile
@@ -470,6 +500,8 @@ void SceneMain::updatePlayer(float deltaTime) {
         explosion->position.y = player.position.y + player.height / 2 - explosion->height / 2;
         explosion->startTime = SDL_GetTicks();
         explosions.push_back(explosion);
+
+        Mix_PlayChannel(0, soundEffects["player_explode"], 0); // play sound
 
         gameOver = true;
         return;

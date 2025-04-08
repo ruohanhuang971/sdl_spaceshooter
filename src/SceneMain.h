@@ -4,6 +4,7 @@
 #include <list>
 #include <random>
 #include <SDL_mixer.h>
+#include <map>
 
 #include "Objects.h"
 #include "Scene.h"
@@ -59,6 +60,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     Player player;
     Game& game;
     Mix_Music* bgm;
+    std::map<std::string, Mix_Chunk*> soundEffects;
 
     std::list<ProjectilePlayer*> playerProjectiles;
     std::list<Enemy*> enemies;
