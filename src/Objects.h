@@ -16,7 +16,9 @@ struct Player {
     int width = 0;
     int height = 0;
     int speed = 300;
-    int currentHealth = 3;
+    int currentHealth = 10;
+    int maxHealth = 10;
+    bool shield = false;
 
     Uint32 coolDown = 300; // cool down between projectiles
     Uint32 lastProjectileTime = 0;
@@ -38,7 +40,8 @@ struct Enemy {
     int height = 0;
     int speed = 150;
     int currentHealth = 2;
-
+    
+    float itemDropRate = 1.0f;
     Uint32 coolDown = 3000; // cool down between projectiles
     Uint32 lastProjectileTime = 0;
 };
@@ -71,9 +74,10 @@ struct Item {
     SDL_FPoint position = {0, 0};
     int width = 0;
     int height = 0;
-    int speed = 400;
+    int speed = 200;
 
     SDL_FPoint direction; // random
+    int bounceCount = 3;
     ItemType type = ItemType::Health;
 };
 

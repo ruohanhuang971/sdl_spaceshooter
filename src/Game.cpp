@@ -34,6 +34,17 @@ void Game::init() {
         isRunning = false;
     }
 
+    // SDL_mixer init
+    if (Mix_Init(MIX_INIT_MP3) != MIX_INIT_MP3) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_mixer could not initialize. SDL_mixer Error: %s\n", Mix_GetError());
+        isRunning = false;
+    }
+    // open mixer channel
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_mixer could not open audio. SDL_mixer Error: %s\n", Mix_GetError());
+        isRunning = false;
+    }
+
     // set currentScene
     currentScene = new SceneMain();
     currentScene->init();
@@ -68,6 +79,9 @@ void Game::clean() {
     }
 
     IMG_Quit();
+
+    Mix_CloseAudio();
+    Mix_Quit();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

@@ -3,6 +3,7 @@
 
 #include <list>
 #include <random>
+#include <SDL_mixer.h>
 
 #include "Objects.h"
 #include "Scene.h"
@@ -33,12 +34,15 @@ class SceneMain : public Scene {  // inherit from Scene class
     void udpateEnemyProjectiles(float deltaTime);
     void updatePlayer(float deltaTime);
     void updateExplosion(float deltaTime);
+    void updateItem(float deltaTime);
 
     // render helper function
+    void renderPlayer();
     void renderPlayerProjectiles();
     void renderEnemies();
     void renderEnemyProjectiles();
     void renderExplosions();
+    void renderItems();
 
     // spawn projectiles
     void spawnPlayerProjectile();
@@ -46,23 +50,30 @@ class SceneMain : public Scene {  // inherit from Scene class
 
     SDL_FPoint getDirection(Enemy* enemy);
     void enemyDeath(Enemy* enemy);
+    void dropItem(Enemy* enemy);
+    void getItem(Item* item);
 
    private:
     bool gameOver = false;
 
     Player player;
     Game& game;
+    Mix_Music* bgm;
+
     std::list<ProjectilePlayer*> playerProjectiles;
     std::list<Enemy*> enemies;
     std::list<ProjectileEnemy*> enemyProjectiles;
     std::list<Explosion*> explosions;
+    std::list<Item*> items;
 
     // create template for objects to avoid repeated file reads
     ProjectilePlayer projectilePLayerTemplate;
     Enemy enemyTemplate;
     ProjectileEnemy projectileEnemyTemplate;
     Explosion explosionTemplate;
-    Item itemTemplate;
+    Item itemHealthTemplate;
+    Item itemShieldTemplate;
+    Item itemTimeTemplate;
 
     // variables for random
     std::mt19937 gen;
