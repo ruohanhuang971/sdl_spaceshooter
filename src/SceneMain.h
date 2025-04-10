@@ -1,10 +1,12 @@
 #ifndef SCENEMAIN_H
 #define SCENEMAIN_H
 
-#include <list>
-#include <random>
 #include <SDL_mixer.h>
+#include <SDL_ttf.h>
+
+#include <list>
 #include <map>
+#include <random>
 
 #include "Objects.h"
 #include "Scene.h"
@@ -44,6 +46,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void renderEnemyProjectiles();
     void renderExplosions();
     void renderItems();
+    void renderUI();
 
     // spawn projectiles
     void spawnPlayerProjectile();
@@ -56,11 +59,14 @@ class SceneMain : public Scene {  // inherit from Scene class
 
    private:
     bool gameOver = false;
+    int score = 0;
 
     Player player;
     Game& game;
     Mix_Music* bgm;
+    TTF_Font* scoreFont;
     std::map<std::string, Mix_Chunk*> soundEffects;
+    SDL_Texture* uiHealth;
 
     std::list<ProjectilePlayer*> playerProjectiles;
     std::list<Enemy*> enemies;

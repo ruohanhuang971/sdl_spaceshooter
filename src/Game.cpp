@@ -45,12 +45,18 @@ void Game::init() {
         isRunning = false;
     }
 
+    // init tff
+    if (TTF_Init() == -1) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_ttf could not open audio. SDL_ttf Error: %s\n", TTF_GetError());
+        isRunning = false;
+    }
+
     // init backgrounds
     nearStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_big.png");
     SDL_QueryTexture(nearStars.texture, NULL, NULL, &nearStars.width, &nearStars.height);
     farStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_small.png");
     SDL_QueryTexture(farStars.texture, NULL, NULL, &farStars.width, &farStars.height);
-    farStars.speed *= 0.8;
+    farStars.speed *= 2;
 
     // set currentScene
     currentScene = new SceneMain();
@@ -97,6 +103,8 @@ void Game::clean() {
     Mix_CloseAudio();
     Mix_Quit();
 
+    TTF_Quit();
+
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -123,7 +131,7 @@ void Game::handleEvents(SDL_Event* event) {
 // update game logic
 void Game::update(float deltaTime) {
     currentScene->update(deltaTime);
-    
+
     backgroundUpdate(deltaTime);
 }
 
@@ -137,12 +145,12 @@ void Game::render() {
 
 void Game::backgroundUpdate(float deltaTime) {
     nearStars.offset += nearStars.speed * deltaTime;
-    if (nearStars.offset >= 0) { // top left at top edge of canvas
+    if (nearStars.offset >= 0) {  // top left at top edge of canvas
         nearStars.offset -= nearStars.height;
     }
 
     farStars.offset += farStars.speed * deltaTime;
-    if (farStars.offset >= 0) { // top left at top edge of canvas
+    if (farStars.offset >= 0) {  // top left at top edge of canvas
         farStars.offset -= farStars.height;
     }
 }

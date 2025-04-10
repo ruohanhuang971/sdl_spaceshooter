@@ -16,8 +16,8 @@ struct Player {
     int width = 0;
     int height = 0;
     int speed = 300;
-    int currentHealth = 10;
-    int maxHealth = 10;
+    int maxHealth = 5;
+    int currentHealth = maxHealth;
     bool shield = false;
 
     Uint32 coolDown = 300; // cool down between projectiles
@@ -41,7 +41,7 @@ struct Enemy {
     int speed = 150;
     int currentHealth = 2;
     
-    float itemDropRate = 1.0f;
+    float itemDropRate = 0.5f;
     Uint32 coolDown = 3000; // cool down between projectiles
     Uint32 lastProjectileTime = 0;
 };

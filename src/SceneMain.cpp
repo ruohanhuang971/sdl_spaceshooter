@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <random>
+#include <string>
 
 #include "Game.h"
 
@@ -31,6 +32,8 @@ void SceneMain::init() {
     soundEffects["hit"] = Mix_LoadWAV("assets/music/spaceship/wave/utility/eff6.wav");
     soundEffects["item"] = Mix_LoadWAV("assets/music/spaceship/wave/utility/eff5.wav");
 
+    // load score font
+    scoreFont = TTF_OpenFont("assets/ttf/80s-retro-future.ttf", 24);
 
     // init random
     std::random_device rd;
@@ -45,6 +48,9 @@ void SceneMain::init() {
     // center player to bottom of screen
     player.position.x = game.getWidth() / 2 - player.width / 2;
     player.position.y = game.getHeight() - player.height;
+
+    // load uiHealth
+    uiHealth = IMG_LoadTexture(game.getRenderer(), "assets/textures/heart.png");
 
     // init player projectile template
     projectilePLayerTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/player_projectile.png");
@@ -116,6 +122,8 @@ void SceneMain::render() {
     renderItems();
 
     renderExplosions();
+
+    renderUI();
 }
 
 void SceneMain::clean() {
@@ -129,7 +137,6 @@ void SceneMain::clean() {
         Mix_HaltMusic();
         Mix_FreeMusic(bgm);
     }
-
     // clean sound effects
     for (auto sound : soundEffects) {
         if (sound.second != nullptr) {
@@ -137,6 +144,16 @@ void SceneMain::clean() {
         }
     }
     soundEffects.clear();
+
+    // clean font
+    if (scoreFont != nullptr) {
+        TTF_CloseFont(scoreFont);
+    }
+
+    // clean uiHealth
+    if (uiHealth != nullptr) {
+        SDL_DestroyTexture(uiHealth);
+    }
 
     // clean template
     if (projectilePLayerTemplate.texture != nullptr) {
@@ -288,6 +305,37 @@ void SceneMain::renderItems() {
     }
 }
 
+void SceneMain::renderUI() {
+    // render health
+    int x = 10;
+    int y = 10;
+    int offset = 40;
+    int size = 32;
+
+    SDL_SetTextureColorMod(uiHealth, 100, 100, 100);  // have a under layer with lighter color hearts that will be
+    for (int i = 0; i < player.maxHealth; i++) {      // exposed when health is lost
+        SDL_Rect rect = {x + i * offset, y, size, size};
+        SDL_RenderCopy(game.getRenderer(), uiHealth, nullptr, &rect);
+    }
+
+    SDL_SetTextureColorMod(uiHealth, 255, 255, 255);  // regular colored currentHealth number of hearts
+    for (int i = 0; i < player.currentHealth; i++) {
+        SDL_Rect rect = {x + i * offset, y, size, size};
+        SDL_RenderCopy(game.getRenderer(), uiHealth, nullptr, &rect);
+    }
+
+    // render score
+    std::string scoreDisplay = "SCORE: " + std::to_string(score);
+    SDL_Color scoreColor = {255, 255, 255, 255};
+    SDL_Surface* surface = TTF_RenderUTF8_Solid(scoreFont, scoreDisplay.c_str(), scoreColor);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(game.getRenderer(), surface);
+    SDL_Rect scoreRect = {game.getWidth() - surface->w - x, y, surface->w, surface->h};
+    SDL_RenderCopy(game.getRenderer(), texture, nullptr, &scoreRect);
+    // free score
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+}
+
 void SceneMain::spawnPlayerProjectile() {
     // create a new projectile and add it to the list of projectiles in the scene
     ProjectilePlayer* projectile = new ProjectilePlayer(projectilePLayerTemplate);  // use template to init new projectile
@@ -296,7 +344,7 @@ void SceneMain::spawnPlayerProjectile() {
 
     playerProjectiles.push_back(projectile);
 
-    Mix_PlayChannel(0, soundEffects["player_shoot"], 0); // play sound
+    Mix_PlayChannel(0, soundEffects["player_shoot"], 0);  // play sound
 }
 
 void SceneMain::spawnEnemyProjectile(Enemy* enemy) {
@@ -308,7 +356,7 @@ void SceneMain::spawnEnemyProjectile(Enemy* enemy) {
 
     enemyProjectiles.push_back(projectile);
 
-    Mix_PlayChannel(-1, soundEffects["enemy_shoot"], 0); // play sound
+    Mix_PlayChannel(-1, soundEffects["enemy_shoot"], 0);  // play sound
 }
 
 SDL_FPoint SceneMain::getDirection(Enemy* enemy) {
@@ -340,11 +388,13 @@ void SceneMain::enemyDeath(Enemy* enemy) {
     explosion->startTime = SDL_GetTicks();
     explosions.push_back(explosion);
 
-    Mix_PlayChannel(-1, soundEffects["enemy_explode"], 0); // play sound
+    Mix_PlayChannel(-1, soundEffects["enemy_explode"], 0);  // play sound
 
     if (dis(gen) < enemy->itemDropRate) {
         dropItem(enemy);
     }
+
+    score += 100; // add to player score
 
     delete enemy;
 }
@@ -379,7 +429,9 @@ void SceneMain::getItem(Item* item) {
     } else {
     }
 
-    Mix_PlayChannel(0, soundEffects["item"], 0); // play sound
+    Mix_PlayChannel(0, soundEffects["item"], 0);  // play sound
+
+    score += 10; // add to player score
 }
 
 void SceneMain::updatePlayerProjectiles(float deltaTime) {
@@ -404,8 +456,8 @@ void SceneMain::updatePlayerProjectiles(float deltaTime) {
                     enemy->currentHealth -= projectile->damage;  // decrease health
 
                     delete projectile;
-                    it = playerProjectiles.erase(it);  // delete projectile
-                    Mix_PlayChannel(0, soundEffects["hit"], 0); // play sound
+                    it = playerProjectiles.erase(it);            // delete projectile
+                    Mix_PlayChannel(0, soundEffects["hit"], 0);  // play sound
 
                     break;
                 }
@@ -477,8 +529,8 @@ void SceneMain::udpateEnemyProjectiles(float deltaTime) {
                 player.currentHealth -= projectile->damage;  // decrease health
 
                 delete projectile;
-                it = enemyProjectiles.erase(it);  // delete projectile
-                Mix_PlayChannel(0, soundEffects["hit"], 0); // play sound
+                it = enemyProjectiles.erase(it);             // delete projectile
+                Mix_PlayChannel(0, soundEffects["hit"], 0);  // play sound
 
                 break;
             } else {
@@ -501,7 +553,7 @@ void SceneMain::updatePlayer(float deltaTime) {
         explosion->startTime = SDL_GetTicks();
         explosions.push_back(explosion);
 
-        Mix_PlayChannel(0, soundEffects["player_explode"], 0); // play sound
+        Mix_PlayChannel(0, soundEffects["player_explode"], 0);  // play sound
 
         gameOver = true;
         return;
