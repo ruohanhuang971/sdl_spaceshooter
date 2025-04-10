@@ -20,8 +20,8 @@ class Game;  // forward declaration
 
 class SceneMain : public Scene {  // inherit from Scene class
    public:
-    SceneMain();
-    ~SceneMain();
+    SceneMain() = default;
+    ~SceneMain() = default;
 
     void init() override;
     void handleEvents(SDL_Event* event) override;
@@ -29,6 +29,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void render() override;
     void clean() override;
 
+   private:
     // update helper functions
     void keyboardControls(float deltaTime);
     void updatePlayerProjectiles(float deltaTime);
@@ -57,12 +58,10 @@ class SceneMain : public Scene {  // inherit from Scene class
     void dropItem(Enemy* enemy);
     void getItem(Item* item);
 
-   private:
     bool gameOver = false;
     int score = 0;
 
     Player player;
-    Game& game;
     Mix_Music* bgm;
     TTF_Font* scoreFont;
     std::map<std::string, Mix_Chunk*> soundEffects;

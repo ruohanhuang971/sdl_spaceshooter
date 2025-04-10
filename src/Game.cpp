@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "SceneTitle.h"
 
 Game::Game() {
 }
@@ -50,6 +51,13 @@ void Game::init() {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "SDL_ttf could not open audio. SDL_ttf Error: %s\n", TTF_GetError());
         isRunning = false;
     }
+    // init fonts
+    titleFont = TTF_OpenFont("assets/ttf/80s-retro-future.ttf", 64);
+    textFont = TTF_OpenFont("assets/ttf/80s-retro-future.ttf", 32);
+    if (titleFont == nullptr || textFont == nullptr) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "TTF_OpenFont Error: %s\n", TTF_GetError());
+        isRunning = false;
+    }
 
     // init backgrounds
     nearStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_big.png");
@@ -59,7 +67,7 @@ void Game::init() {
     farStars.speed *= 2;
 
     // set currentScene
-    currentScene = new SceneMain();
+    currentScene = new SceneTitle();
     currentScene->init();
 }
 
@@ -96,6 +104,13 @@ void Game::clean() {
     }
     if (farStars.texture != nullptr) {
         SDL_DestroyTexture(farStars.texture);
+    }
+
+    if (titleFont != nullptr) {
+        TTF_CloseFont(titleFont);
+    }
+    if (textFont != nullptr) {
+        TTF_CloseFont(textFont);
     }
 
     IMG_Quit();
@@ -169,4 +184,22 @@ void Game::backgroundRender() {
             SDL_RenderCopy(renderer, nearStars.texture, nullptr, &bgRect);
         }
     }
+}
+
+void Game::renderTextCentered(std::string text, float posY, bool isTitle) {
+    SDL_Color scoreColor = {255, 255, 255, 255};
+    SDL_Surface* surface;
+    if (isTitle) {
+        surface = TTF_RenderUTF8_Solid(titleFont, text.c_str(), scoreColor);
+    } else {
+        surface = TTF_RenderUTF8_Solid(textFont, text.c_str(), scoreColor);
+    }
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    
+    int y = static_cast<int>(getHeight() - surface->h) * posY;
+    SDL_Rect scoreRect = {getWidth() / 2 - surface->w / 2, y, surface->w, surface->h};
+    SDL_RenderCopy(renderer, texture, nullptr, &scoreRect);
+    // free score
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
 }

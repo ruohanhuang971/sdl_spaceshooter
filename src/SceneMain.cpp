@@ -8,12 +8,7 @@
 #include <string>
 
 #include "Game.h"
-
-SceneMain::SceneMain() : game(Game::getInstance()) {
-}
-
-SceneMain::~SceneMain() {
-}
+#include "SceneTitle.h"
 
 void SceneMain::init() {
     // init bgm
@@ -95,7 +90,12 @@ void SceneMain::init() {
 }
 
 void SceneMain::handleEvents(SDL_Event* event) {
-    event = nullptr;
+    if (event->type == SDL_KEYDOWN) {
+        if (event->key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+            Scene* sceneTitle = new SceneTitle();
+            game.changeScene(sceneTitle);
+        }
+    }
 }
 
 void SceneMain::update(float deltaTime) {

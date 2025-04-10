@@ -33,6 +33,8 @@ class Game {
     void backgroundUpdate(float deltaTime);
     void backgroundRender();
 
+    void renderTextCentered(std::string text, float posY, bool isTitle);
+
     // getters
     SDL_Window* getWindow() {return window;}
     SDL_Renderer* getRenderer() {return renderer;}
@@ -63,6 +65,10 @@ class Game {
     // background
     Background nearStars;
     Background farStars;
+
+    // title/ending screen font
+    TTF_Font* titleFont;
+    TTF_Font* textFont;
 };
 
 #endif
