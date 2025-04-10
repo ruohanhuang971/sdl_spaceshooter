@@ -45,6 +45,13 @@ void Game::init() {
         isRunning = false;
     }
 
+    // init backgrounds
+    nearStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_big.png");
+    SDL_QueryTexture(nearStars.texture, NULL, NULL, &nearStars.width, &nearStars.height);
+    farStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_small.png");
+    SDL_QueryTexture(farStars.texture, NULL, NULL, &farStars.width, &farStars.height);
+    farStars.speed *= 0.8;
+
     // set currentScene
     currentScene = new SceneMain();
     currentScene->init();
@@ -78,6 +85,13 @@ void Game::clean() {
         delete currentScene;
     }
 
+    if (nearStars.texture != nullptr) {
+        SDL_DestroyTexture(nearStars.texture);
+    }
+    if (farStars.texture != nullptr) {
+        SDL_DestroyTexture(farStars.texture);
+    }
+
     IMG_Quit();
 
     Mix_CloseAudio();
@@ -109,11 +123,42 @@ void Game::handleEvents(SDL_Event* event) {
 // update game logic
 void Game::update(float deltaTime) {
     currentScene->update(deltaTime);
+    
+    backgroundUpdate(deltaTime);
 }
 
 // clear, render, show new render
 void Game::render() {
     SDL_RenderClear(renderer);
+    backgroundRender();
     currentScene->render();
     SDL_RenderPresent(renderer);
+}
+
+void Game::backgroundUpdate(float deltaTime) {
+    nearStars.offset += nearStars.speed * deltaTime;
+    if (nearStars.offset >= 0) { // top left at top edge of canvas
+        nearStars.offset -= nearStars.height;
+    }
+
+    farStars.offset += farStars.speed * deltaTime;
+    if (farStars.offset >= 0) { // top left at top edge of canvas
+        farStars.offset -= farStars.height;
+    }
+}
+
+void Game::backgroundRender() {
+    for (int posY = static_cast<int>(farStars.offset); posY < getHeight(); posY += farStars.height) {
+        for (int posX = 0; posX < getWidth(); posX += farStars.width) {
+            SDL_Rect bgRect = {posX, posY, farStars.width, farStars.height};
+            SDL_RenderCopy(renderer, farStars.texture, nullptr, &bgRect);
+        }
+    }
+
+    for (int posY = static_cast<int>(nearStars.offset); posY < getHeight(); posY += nearStars.height) {
+        for (int posX = 0; posX < getWidth(); posX += nearStars.width) {
+            SDL_Rect bgRect = {posX, posY, nearStars.width, nearStars.height};
+            SDL_RenderCopy(renderer, nearStars.texture, nullptr, &bgRect);
+        }
+    }
 }
