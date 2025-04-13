@@ -39,6 +39,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void updatePlayer(float deltaTime);
     void updateExplosion(float deltaTime);
     void updateItem(float deltaTime);
+    void changeToDeathScene(float deltaTime, float delay);
 
     // render helper function
     void renderPlayer();
@@ -60,6 +61,8 @@ class SceneMain : public Scene {  // inherit from Scene class
 
     bool gameOver = false;
     int score = 0;
+    float deathSceneTimer = 0.0f;
+    float deathSceneDelay = 1.0f;
 
     Player player;
     Mix_Music* bgm;

@@ -1,10 +1,14 @@
 #include "Game.h"
+
+#include <fstream>
+
 #include "SceneTitle.h"
 
 Game::Game() {
 }
 
 Game::~Game() {
+    saveLeaderBoard();
     clean();
 }
 
@@ -28,6 +32,8 @@ void Game::init() {
         SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Renderer could not initialize. SDL_Error: %s\n", SDL_GetError());
         isRunning = false;
     }
+    SDL_RenderSetLogicalSize(renderer, WINDOW_WIDTH, WINDOW_HEIGHT);
+
 
     // SDL_image init
     if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
@@ -65,6 +71,8 @@ void Game::init() {
     farStars.texture = IMG_LoadTexture(renderer, "assets/textures/background_small.png");
     SDL_QueryTexture(farStars.texture, NULL, NULL, &farStars.width, &farStars.height);
     farStars.speed *= 2;
+
+    loadLeaderBoard();
 
     // set currentScene
     currentScene = new SceneTitle();
@@ -139,6 +147,19 @@ void Game::handleEvents(SDL_Event* event) {
         if (event->type == SDL_QUIT) {  // if new game event is quit
             isRunning = false;
         }
+        if (event->type == SDL_KEYDOWN) {
+            if (event->key.keysym.scancode == SDL_SCANCODE_F4) {
+                isFullscreen = !isFullscreen;
+                if (isFullscreen) {
+                    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+                } else {
+                    SDL_SetWindowFullscreen(window, 0);
+                }  
+            }
+            if (event->key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                isRunning = false;
+            }
+        }
         currentScene->handleEvents(event);
     }
 }
@@ -186,7 +207,7 @@ void Game::backgroundRender() {
     }
 }
 
-void Game::renderTextCentered(std::string text, float posY, bool isTitle) {
+SDL_Point Game::renderTextCentered(std::string text, float posY, bool isTitle) {
     SDL_Color scoreColor = {255, 255, 255, 255};
     SDL_Surface* surface;
     if (isTitle) {
@@ -195,11 +216,70 @@ void Game::renderTextCentered(std::string text, float posY, bool isTitle) {
         surface = TTF_RenderUTF8_Solid(textFont, text.c_str(), scoreColor);
     }
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    
+
     int y = static_cast<int>(getHeight() - surface->h) * posY;
     SDL_Rect scoreRect = {getWidth() / 2 - surface->w / 2, y, surface->w, surface->h};
     SDL_RenderCopy(renderer, texture, nullptr, &scoreRect);
     // free score
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
+
+    return {scoreRect.x + scoreRect.w, y};
+}
+
+void Game::renderTextPoint(std::string text, int posX, int posY, bool isTitle, bool isLeft) {
+    SDL_Color scoreColor = {255, 255, 255, 255};
+    SDL_Surface* surface;
+    if (isTitle) {
+        surface = TTF_RenderUTF8_Solid(titleFont, text.c_str(), scoreColor);
+    } else {
+        surface = TTF_RenderUTF8_Solid(textFont, text.c_str(), scoreColor);
+    }
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+
+    SDL_Rect scoreRect;
+    if (isLeft) {
+        scoreRect = {posX, posY, surface->w, surface->h};
+    } else {
+        scoreRect = {getWidth() - posX - surface->w, posY, surface->w, surface->h};
+    }
+
+    SDL_RenderCopy(renderer, texture, nullptr, &scoreRect);
+    // free score
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+}
+
+void Game::insertLearderBoard(int score, std::string name) {
+    leaderBoard.insert({score, name});
+    if (leaderBoard.size() > 10) {
+        leaderBoard.erase(--leaderBoard.end());
+    }
+}
+
+void Game::saveLeaderBoard() {
+    // save leaderBoard to file
+    std::ofstream file("assets/save.dat");
+    if (!file.is_open()) {
+        SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to open file");
+        return;
+    }
+    for (auto item : leaderBoard) {
+        file << item.first << " " << item.second << std::endl;
+    }
+}
+
+void Game::loadLeaderBoard() {
+    // load leaderBoard from file
+    std::ifstream file("assets/save.dat");
+    if (!file.is_open()) {
+        SDL_Log("Failed to open save file");
+        return;
+    }
+    leaderBoard.clear();
+    int score;
+    std::string name;
+    while (file >> score >> name) {
+        leaderBoard.insert({score, name});
+    }
 }

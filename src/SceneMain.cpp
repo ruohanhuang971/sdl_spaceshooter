@@ -9,6 +9,7 @@
 
 #include "Game.h"
 #include "SceneTitle.h"
+#include "SceneEnd.h"
 
 void SceneMain::init() {
     // init bgm
@@ -107,6 +108,9 @@ void SceneMain::update(float deltaTime) {
     updatePlayer(deltaTime);
     updateExplosion(deltaTime);
     updateItem(deltaTime);
+    if (gameOver) {
+        changeToDeathScene(deltaTime, deathSceneDelay);
+    }
 }
 
 void SceneMain::render() {
@@ -556,6 +560,7 @@ void SceneMain::updatePlayer(float deltaTime) {
         Mix_PlayChannel(0, soundEffects["player_explode"], 0);  // play sound
 
         gameOver = true;
+        game.setScore(score);
         return;
     }
 
@@ -625,6 +630,14 @@ void SceneMain::updateItem(float deltaTime) {
                 it++;
             }
         }
+    }
+}
+
+void SceneMain::changeToDeathScene(float deltaTime, float delay) {
+    deathSceneTimer += deltaTime;
+    if (deathSceneTimer >= delay) {
+        Scene* sceneEnd = new SceneEnd();
+        game.changeScene(sceneEnd);
     }
 }
 

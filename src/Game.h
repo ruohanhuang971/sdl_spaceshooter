@@ -5,6 +5,8 @@
 #include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
+#include <map>
+#include <iostream>
 
 #include "SceneMain.h"
 #include "Objects.h"    
@@ -33,13 +35,23 @@ class Game {
     void backgroundUpdate(float deltaTime);
     void backgroundRender();
 
-    void renderTextCentered(std::string text, float posY, bool isTitle);
+    SDL_Point renderTextCentered(std::string text, float posY, bool isTitle);
+    void renderTextPoint(std::string text, int posX, int posY, bool isTitle, bool isLeft = true);
+
+    void insertLearderBoard(int score, std::string name);
+    void saveLeaderBoard();
+    void loadLeaderBoard();
 
     // getters
     SDL_Window* getWindow() {return window;}
     SDL_Renderer* getRenderer() {return renderer;}
     int getWidth() {return WINDOW_WIDTH;}
     int getHeight() {return WINDOW_HEIGHT;}
+    int getScore() {return score;}
+    std::multimap<int, std::string, std::greater<int>>& getLeaderBoard() {return leaderBoard;}
+
+    // setters
+    void setScore(int gameScore) {score = gameScore;}
 
    private:
     Game();  // constructor
@@ -49,6 +61,7 @@ class Game {
     Game& operation(const Game&) = delete;
 
     bool isRunning = true;
+    bool isFullscreen = false;
     Scene* currentScene = nullptr;  // keep track of current scene
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
@@ -61,6 +74,8 @@ class Game {
     int FPS = 60;
     Uint32 frameTime = 1000 / FPS; // 1000ms / framePerSecond
     float deltaTime;
+    int score = 0;
+    std::multimap<int, std::string, std::greater<int>> leaderBoard;
 
     // background
     Background nearStars;
