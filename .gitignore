@@ -6,3 +6,4 @@ build/
 
 # vs code
 .vscode/*
+assets/save.dat

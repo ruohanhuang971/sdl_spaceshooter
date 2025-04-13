@@ -39,8 +39,8 @@ void SceneMain::init() {
     // load player texture
     player.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/space_ship.png");
     SDL_QueryTexture(player.texture, NULL, NULL, &player.width, &player.height);  // store width and height of texture in player struct
-    player.width /= 3;                                                            // shrink player
-    player.height /= 3;
+    player.width /= 2.5;                                                            // shrink player
+    player.height /= 2.5;
     // center player to bottom of screen
     player.position.x = game.getWidth() / 2 - player.width / 2;
     player.position.y = game.getHeight() - player.height;
