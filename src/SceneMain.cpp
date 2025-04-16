@@ -3,13 +3,14 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include <cmath>
 #include <iostream>
 #include <random>
 #include <string>
 
 #include "Game.h"
-#include "SceneTitle.h"
 #include "SceneEnd.h"
+#include "SceneTitle.h"
 
 void SceneMain::init() {
     // init bgm
@@ -39,7 +40,7 @@ void SceneMain::init() {
     // load player texture
     player.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/space_ship.png");
     SDL_QueryTexture(player.texture, NULL, NULL, &player.width, &player.height);  // store width and height of texture in player struct
-    player.width /= 2.5;                                                            // shrink player
+    player.width /= 2.5;                                                          // shrink player
     player.height /= 2.5;
     // center player to bottom of screen
     player.position.x = game.getWidth() / 2 - player.width / 2;
@@ -78,16 +79,25 @@ void SceneMain::init() {
     SDL_QueryTexture(itemHealthTemplate.texture, NULL, NULL, &itemHealthTemplate.width, &itemHealthTemplate.height);
     itemHealthTemplate.height /= 3;
     itemHealthTemplate.width /= 3;
+    itemHealthTemplate.type = ItemType::Health;
 
     itemShieldTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/powerup_shield.png");
     SDL_QueryTexture(itemShieldTemplate.texture, NULL, NULL, &itemShieldTemplate.width, &itemShieldTemplate.height);
     itemShieldTemplate.height /= 3;
     itemShieldTemplate.width /= 3;
+    itemShieldTemplate.type = ItemType::Shield;
 
     itemTimeTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/powerup_time.png");
     SDL_QueryTexture(itemTimeTemplate.texture, NULL, NULL, &itemTimeTemplate.width, &itemTimeTemplate.height);
     itemTimeTemplate.height /= 3;
     itemTimeTemplate.width /= 3;
+    itemTimeTemplate.type = ItemType::Time;
+
+    // init shield
+    shieldTemplate.texture = IMG_LoadTexture(game.getRenderer(), "assets/textures/player_shield.png");
+    SDL_QueryTexture(shieldTemplate.texture, NULL, NULL, &shieldTemplate.width, &shieldTemplate.height);
+    shieldTemplate.height /= 2;
+    shieldTemplate.width /= 2;
 }
 
 void SceneMain::handleEvents(SDL_Event* event) {
@@ -108,6 +118,7 @@ void SceneMain::update(float deltaTime) {
     updatePlayer(deltaTime);
     updateExplosion(deltaTime);
     updateItem(deltaTime);
+    updateTime(deltaTime);
     if (gameOver) {
         changeToDeathScene(deltaTime, deathSceneDelay);
     }
@@ -328,12 +339,26 @@ void SceneMain::renderUI() {
         SDL_RenderCopy(game.getRenderer(), uiHealth, nullptr, &rect);
     }
 
+    // render time
+    int timeSec = static_cast<int>(std::ceill(time));
+    if (timeSec < 0) {
+        timeSec = 0;
+    }
+    std::string timeDisplay = "TIME: " + std::to_string(timeSec);
+    SDL_Color UIColor = {255, 255, 255, 255};
+    SDL_Surface* timeSurface = TTF_RenderUTF8_Solid(scoreFont, timeDisplay.c_str(), UIColor);
+    SDL_Texture* timeTexture = SDL_CreateTextureFromSurface(game.getRenderer(), timeSurface);
+    SDL_Rect timeRect = {game.getWidth() - timeSurface->w - x, y, timeSurface->w, timeSurface->h};
+    SDL_RenderCopy(game.getRenderer(), timeTexture, nullptr, &timeRect);
+    // free time
+    SDL_FreeSurface(timeSurface);
+    SDL_DestroyTexture(timeTexture);
+
     // render score
     std::string scoreDisplay = "SCORE: " + std::to_string(score);
-    SDL_Color scoreColor = {255, 255, 255, 255};
-    SDL_Surface* surface = TTF_RenderUTF8_Solid(scoreFont, scoreDisplay.c_str(), scoreColor);
+    SDL_Surface* surface = TTF_RenderUTF8_Solid(scoreFont, scoreDisplay.c_str(), UIColor);
     SDL_Texture* texture = SDL_CreateTextureFromSurface(game.getRenderer(), surface);
-    SDL_Rect scoreRect = {game.getWidth() - surface->w - x, y, surface->w, surface->h};
+    SDL_Rect scoreRect = {game.getWidth() - surface->w - x, y + timeSurface->h, surface->w, surface->h};
     SDL_RenderCopy(game.getRenderer(), texture, nullptr, &scoreRect);
     // free score
     SDL_FreeSurface(surface);
@@ -398,20 +423,22 @@ void SceneMain::enemyDeath(Enemy* enemy) {
         dropItem(enemy);
     }
 
-    score += 100; // add to player score
+    score += 100;  // add to player score
 
     delete enemy;
 }
 
 void SceneMain::dropItem(Enemy* enemy) {
-    Item* item = new Item(itemHealthTemplate);
+    Item* item;
 
-    // auto perc = dis(gen);
-    // if (perc < (1.0f / 3)) {
-    //     item->texture
-    // } else if (perc < (2.0f / 3)) {
-
-    // }
+    auto perc = dis(gen);
+    if (perc < (1.0f / 3)) {
+        item = new Item(itemHealthTemplate);
+    } else if (perc < (2.0f / 3)) {
+        item = new Item(itemShieldTemplate);
+    } else {
+        item = new Item(itemTimeTemplate);
+    }
 
     item->position.x = enemy->position.x + enemy->width / 2 - item->width / 2;
     item->position.y = enemy->position.y + enemy->height / 2 - item->height / 2;
@@ -431,11 +458,12 @@ void SceneMain::getItem(Item* item) {
     } else if (item->type == ItemType::Shield) {
         player.shield = true;
     } else {
+        time += 10.0f;
     }
 
     Mix_PlayChannel(0, soundEffects["item"], 0);  // play sound
 
-    score += 10; // add to player score
+    score += 10;  // add to player score
 }
 
 void SceneMain::updatePlayerProjectiles(float deltaTime) {
@@ -530,7 +558,11 @@ void SceneMain::udpateEnemyProjectiles(float deltaTime) {
                                        static_cast<int>(projectile->position.x), static_cast<int>(projectile->position.y),
                                        projectile->width, projectile->height};
             if (SDL_HasIntersection(&playerRect, &projectileRect) && !gameOver) {
-                player.currentHealth -= projectile->damage;  // decrease health
+                if (player.shield) {
+                    player.shield = false;
+                } else {
+                    player.currentHealth -= projectile->damage;  // decrease health
+                }
 
                 delete projectile;
                 it = enemyProjectiles.erase(it);             // delete projectile
@@ -549,7 +581,7 @@ void SceneMain::updatePlayer(float deltaTime) {
         return;
     }
 
-    if (player.currentHealth <= 0) {
+    if (player.currentHealth <= 0 || time <= 0) {
         // create explosion
         Explosion* explosion = new Explosion(explosionTemplate);
         explosion->position.x = player.position.x + player.width / 2 - explosion->width / 2;
@@ -641,14 +673,23 @@ void SceneMain::changeToDeathScene(float deltaTime, float delay) {
     }
 }
 
+void SceneMain::updateTime(float deltaTime) {
+    time -= deltaTime;
+}
+
 void SceneMain::renderPlayer() {
     // player postition is a float (for calculation precision), need to cast to int
     if (!gameOver) {
-        SDL_Rect playerRect = {static_cast<int>(player.position.x),
-                               static_cast<int>(player.position.y),
-                               player.width,
-                               player.height};
+        SDL_Rect playerRect = {static_cast<int>(player.position.x), static_cast<int>(player.position.y),
+                               player.width, player.height};
         SDL_RenderCopy(game.getRenderer(), player.texture, NULL, &playerRect);
+
+        if (player.shield) {
+            SDL_Rect shieldRect = {static_cast<int>(player.position.x) + player.width / 2 - shieldTemplate.width / 2,
+                                   static_cast<int>(player.position.y) + player.height / 2 - shieldTemplate.height / 2,
+                                   shieldTemplate.width, shieldTemplate.height};
+            SDL_RenderCopy(game.getRenderer(), shieldTemplate.texture, NULL, &shieldRect);
+        }
     }
 }
 

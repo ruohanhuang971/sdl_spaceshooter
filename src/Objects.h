@@ -41,8 +41,8 @@ struct Enemy {
     int speed = 150;
     int currentHealth = 2;
     
-    float itemDropRate = 0.5f;
-    Uint32 coolDown = 3000; // cool down between projectiles
+    float itemDropRate = 1.0f;
+    Uint32 coolDown = 4000; // cool down between projectiles
     Uint32 lastProjectileTime = 0;
 };
 
@@ -79,6 +79,13 @@ struct Item {
     SDL_FPoint direction; // random
     int bounceCount = 3;
     ItemType type = ItemType::Health;
+};
+
+struct Shield {
+    SDL_Texture* texture = nullptr;
+    SDL_FPoint position = {0, 0};
+    int width = 0;
+    int height = 0;
 };
 
 struct Background {

@@ -40,6 +40,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     void updateExplosion(float deltaTime);
     void updateItem(float deltaTime);
     void changeToDeathScene(float deltaTime, float delay);
+    void updateTime(float deltaTime);
 
     // render helper function
     void renderPlayer();
@@ -61,6 +62,7 @@ class SceneMain : public Scene {  // inherit from Scene class
 
     bool gameOver = false;
     int score = 0;
+    float time = 30.0f;
     float deathSceneTimer = 0.0f;
     float deathSceneDelay = 1.0f;
 
@@ -84,6 +86,7 @@ class SceneMain : public Scene {  // inherit from Scene class
     Item itemHealthTemplate;
     Item itemShieldTemplate;
     Item itemTimeTemplate;
+    Shield shieldTemplate;
 
     // variables for random
     std::mt19937 gen;
