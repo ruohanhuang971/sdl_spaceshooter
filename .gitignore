@@ -1,8 +1,8 @@
 build/
 
 # executable / debug
-*.exe
-*.pdb
+# *.exe
+# *.pdb
 
 # vs code
 .vscode/*
